@@ -27,3 +27,7 @@ Download `docs/SurviveTheHulk_Editor.html` and open it in a browser. The whole s
 ## Verification
 
 The fixture uses simulated Roblox services. Run `python tests/run_checks.py` with `LUAU_BIN` and `LUAU_COMPILE_BIN` pointing to native Luau tools. The current suite passes 101 checks covering color/role behavior, usernames-only overlays, collision and movement restoration, sprint and mobile input release, flight constraints, fog/camera settings, respawns, reset, failed flight startup and cleanup. These checks do not verify live role replication, server acceptance or Roblox rendering.
+
+## Rift branding
+
+The header uses the user-supplied Rift Hub R emblem from `assets/rift_logo.jpg`. Existing minimized controls use the same emblem. The original JPEG is preserved unchanged; logo cache names include its content hash. If custom images are unavailable, text branding remains usable.

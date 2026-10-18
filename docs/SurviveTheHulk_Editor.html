@@ -92,6 +92,48 @@ local function message(text)
 	lastMessage=text; lastMessageAt=os.clock()
 	if statusLabel then statusLabel.Text=text end
 end
+local Brand=(function()
+-- Exact user-supplied Rift logo. ImageRect selects the R emblem for compact controls.
+-- One asynchronous download per script; failed image loading leaves the text fallback usable.
+return function(url)
+	local M={}
+	local asset,started=nil,false
+	local targets=setmetatable({},{__mode="k"})
+	local function paint(image,fallback)
+		if not image.Parent or not asset then return end
+		image.Image=asset; image.Visible=true
+		if fallback and fallback.Parent then fallback.Text="" end
+	end
+	function M.Apply(image,fallback)
+		image.Name="RiftLogo"; image.ImageRectOffset=Vector2.new(380,295); image.ImageRectSize=Vector2.new(510,525)
+		image.ImageColor3=Color3.new(1,1,1); image.ScaleType=Enum.ScaleType.Fit; image.Visible=false
+		targets[image]=fallback or false
+		if asset then paint(image,fallback); return end
+		if started then return end; started=true
+		task.spawn(function()
+			local ok,result=pcall(function()
+				local customAsset=type(getcustomasset)=="function" and getcustomasset or type(getsynasset)=="function" and getsynasset
+				assert(customAsset and type(writefile)=="function" and type(isfile)=="function","Custom images unavailable")
+				local path="RiftHub/rift-logo-92145dc6000c.jpg"
+				if type(isfolder)=="function" and type(makefolder)=="function" and not isfolder("RiftHub") then makefolder("RiftHub") end
+				if not isfile(path) then
+					local bytes=game:HttpGet(url)
+					assert(type(bytes)=="string" and bytes:sub(1,3)==string.char(255,216,255),"Invalid Rift logo")
+					writefile(path,bytes)
+				end
+				local content=customAsset(path)
+				assert(type(content)=="string" and content~="","Image registration failed")
+				return content
+			end)
+			if not ok then return end
+			asset=result
+			for image,fallback in pairs(targets) do paint(image,fallback) end
+			table.clear(targets)
+		end)
+	end
+	return M
+end
+end)()("https://raw.githubusercontent.com/copperpoppercms-sys/Rift-Hub-Survive-The-Hulk/main/assets/rift_logo.jpg")
 local function normalize(value) return type(value)=="string" and value:lower():gsub("[^%w]","") or "" end
 local function hulkWord(value)
 	if type(value)~="string" then return false end
@@ -495,7 +537,9 @@ local function build()
 	make("Frame",{Position=UDim2.fromOffset(16,0),Size=UDim2.new(1,-32,0,2),BackgroundColor3=C.Green,BackgroundTransparency=0.16,BorderSizePixel=0},surface)
 	local top=make("Frame",{Name="DragHandle",Active=true,Size=UDim2.new(1,0,0,60),BackgroundTransparency=1},surface)
 	local mark=make("Frame",{Position=UDim2.fromOffset(16,14),Size=UDim2.fromOffset(34,34),BackgroundColor3=C.DarkGreen,BorderSizePixel=0},top); round(mark,9)
-	label(mark,"H",23,C.Green,UDim2.fromOffset(8,2),UDim2.fromOffset(25,30),true)
+	local logoFallback=label(mark,"R",23,C.Green,UDim2.fromOffset(8,2),UDim2.fromOffset(25,30),true)
+	local logoImage=make("ImageLabel",{Position=UDim2.fromOffset(4,3),Size=UDim2.fromOffset(26,27),BackgroundTransparency=1},mark)
+	Brand.Apply(logoImage,logoFallback)
 	label(top,"RIFT HUB",14,C.Text,UDim2.fromOffset(61,11),UDim2.new(1,-165,0,23),true)
 	headerStatus=label(top,"MONITORING FACILITY",9,C.Sub,UDim2.fromOffset(62,35),UDim2.new(1,-165,0,14),true)
 	local close=make("TextButton",{Name="Close",Position=UDim2.new(1,-43,0,16),Size=UDim2.fromOffset(28,28),Text="×",TextSize=21,
@@ -573,8 +617,10 @@ local function build()
 	statusLabel=label(surface,"Ready",10,C.Sub,UDim2.new(0,160,1,-24),UDim2.new(1,-175,0,18))
 	warning=make("TextLabel",{Name="HulkWarning",AnchorPoint=Vector2.new(0.5,1),Position=UDim2.new(0.5,0,1,-26),Size=UDim2.fromOffset(270,32),
 		BackgroundColor3=C.Base,BackgroundTransparency=0.12,BorderSizePixel=0,TextColor3=C.Green,Font=Enum.Font.GothamBold,TextSize=12,Text="",Visible=false},gui); round(warning,9)
-	bubble=make("TextButton",{Name="Restore",AnchorPoint=Vector2.new(),Position=UDim2.fromOffset(18,150),Size=UDim2.fromOffset(48,48),Text="H",Font=Enum.Font.GothamBold,
+	bubble=make("TextButton",{Name="Restore",AnchorPoint=Vector2.new(),Position=UDim2.fromOffset(18,150),Size=UDim2.fromOffset(48,48),Text="R",Font=Enum.Font.GothamBold,
 		TextSize=24,TextColor3=C.Green,BackgroundColor3=C.Base,BorderSizePixel=0,AutoButtonColor=false,Visible=false},gui); round(bubble,13); make("UIStroke",{Color=C.Green,Transparency=0.45},bubble); hover(bubble)
+	local restoreLogo=make("ImageLabel",{Position=UDim2.fromOffset(8,7),Size=UDim2.fromOffset(32,33),BackgroundTransparency=1},bubble)
+	Brand.Apply(restoreLogo,bubble)
 	local touchPad=make("Frame",{Name="TouchFlight",AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,-20,0.45,0),
 		Size=UDim2.fromOffset(58,124),BackgroundTransparency=1,Visible=false},gui)
 	local function holdButton(parent,name,text,position,action)
