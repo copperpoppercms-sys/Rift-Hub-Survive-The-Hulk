@@ -206,7 +206,7 @@ local function character(plr)
 	root.Size=Vector3.new(2,2,1)
 	root.CFrame=CFrame.lookAt(root.Position,root.Position+Vector3.new(0,0,-1))
 	model.PrimaryPart=root
-	local h=node("Humanoid","Humanoid",model); h.JumpPower=50; h.JumpHeight=7.2; h.UseJumpPower=true; h.MoveDirection=Vector3.new(); h.WalkSpeed=16; h.AutoRotate=true
+	local h=node("Humanoid","Humanoid",model); h.JumpPower=50; h.JumpHeight=7.2; h.UseJumpPower=true; h.MoveDirection=Vector3.new(); h.WalkSpeed=16; h.AutoRotate=true; h.PlatformStand=false; h.FloorMaterial=Enum.Material.Concrete
 	node("Animator","Animator",h); plr.Character=model
 	return model
 end
@@ -256,6 +256,11 @@ end
 
 workspace.DescendantAdded=signal()
 localPlayer.CharacterAdded=signal()
+localPlayer.Idled=signal()
+localPlayer.CameraMaxZoomDistance=24; localPlayer.CameraMinZoomDistance=0.5
+input.TouchEnabled=true
+local idleClicks=0
+services.VirtualUser={CaptureController=function() end,ClickButton2=function() idleClicks+=1 end}
 local originalInstanceNew=Instance.new
 Instance.new=function(class)
  local item=originalInstanceNew(class)
