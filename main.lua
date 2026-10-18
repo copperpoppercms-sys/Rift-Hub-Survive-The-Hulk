@@ -60,20 +60,26 @@ local function message(text)
 	if statusLabel then statusLabel.Text=text end
 end
 local Brand=(function()
--- Exact user-supplied Rift logo. ImageRect selects the R emblem for compact controls.
+-- Exact user-supplied Rift logo. Normalized clipping stays centered after texture resizing.
 -- One asynchronous download per script; failed image loading leaves the text fallback usable.
 return function(url)
 	local M={}
 	local asset,started=nil,false
 	local targets=setmetatable({},{__mode="k"})
 	local function paint(image,fallback)
-		if not image.Parent or not asset then return end
+		if not image.Parent or not image.Parent.Parent or not asset then return end
 		image.Image=asset; image.Visible=true
 		if fallback and fallback.Parent then fallback.Text="" end
 	end
 	function M.Apply(image,fallback)
-		image.Name="RiftLogo"; image.ImageRectOffset=Vector2.new(380,295); image.ImageRectSize=Vector2.new(510,525)
-		image.ImageColor3=Color3.new(1,1,1); image.ScaleType=Enum.ScaleType.Fit; image.Visible=false
+		local viewport=Instance.new("Frame")
+		viewport.Name="RiftLogoViewport"; viewport.BackgroundTransparency=1; viewport.BorderSizePixel=0; viewport.ClipsDescendants=true
+		viewport.Position=image.Position; viewport.Size=image.Size; viewport.AnchorPoint=image.AnchorPoint
+		viewport.LayoutOrder=image.LayoutOrder; viewport.ZIndex=image.ZIndex; viewport.Parent=image.Parent
+		image.Parent=viewport; image.AnchorPoint=Vector2.new()
+		image.Position=UDim2.fromScale(-374/520,-298/520); image.Size=UDim2.fromScale(1254/520,1254/520)
+		image.Name="RiftLogo"; image.ImageRectOffset=Vector2.new(); image.ImageRectSize=Vector2.new()
+		image.ImageColor3=Color3.new(1,1,1); image.ScaleType=Enum.ScaleType.Stretch; image.Visible=false
 		targets[image]=fallback or false
 		if asset then paint(image,fallback); return end
 		if started then return end; started=true
@@ -505,7 +511,7 @@ local function build()
 	local top=make("Frame",{Name="DragHandle",Active=true,Size=UDim2.new(1,0,0,60),BackgroundTransparency=1},surface)
 	local mark=make("Frame",{Position=UDim2.fromOffset(16,14),Size=UDim2.fromOffset(34,34),BackgroundColor3=C.DarkGreen,BorderSizePixel=0},top); round(mark,9)
 	local logoFallback=label(mark,"R",23,C.Green,UDim2.fromOffset(8,2),UDim2.fromOffset(25,30),true)
-	local logoImage=make("ImageLabel",{Position=UDim2.fromOffset(4,3),Size=UDim2.fromOffset(26,27),BackgroundTransparency=1},mark)
+	local logoImage=make("ImageLabel",{Position=UDim2.fromOffset(4,4),Size=UDim2.fromOffset(26,26),BackgroundTransparency=1},mark)
 	Brand.Apply(logoImage,logoFallback)
 	label(top,"RIFT HUB",14,C.Text,UDim2.fromOffset(61,11),UDim2.new(1,-165,0,23),true)
 	headerStatus=label(top,"MONITORING FACILITY",9,C.Sub,UDim2.fromOffset(62,35),UDim2.new(1,-165,0,14),true)
@@ -586,7 +592,7 @@ local function build()
 		BackgroundColor3=C.Base,BackgroundTransparency=0.12,BorderSizePixel=0,TextColor3=C.Green,Font=Enum.Font.GothamBold,TextSize=12,Text="",Visible=false},gui); round(warning,9)
 	bubble=make("TextButton",{Name="Restore",AnchorPoint=Vector2.new(),Position=UDim2.fromOffset(18,150),Size=UDim2.fromOffset(48,48),Text="R",Font=Enum.Font.GothamBold,
 		TextSize=24,TextColor3=C.Green,BackgroundColor3=C.Base,BorderSizePixel=0,AutoButtonColor=false,Visible=false},gui); round(bubble,13); make("UIStroke",{Color=C.Green,Transparency=0.45},bubble); hover(bubble)
-	local restoreLogo=make("ImageLabel",{Position=UDim2.fromOffset(8,7),Size=UDim2.fromOffset(32,33),BackgroundTransparency=1},bubble)
+	local restoreLogo=make("ImageLabel",{Position=UDim2.fromOffset(8,8),Size=UDim2.fromOffset(32,32),BackgroundTransparency=1},bubble)
 	Brand.Apply(restoreLogo,bubble)
 	local touchPad=make("Frame",{Name="TouchFlight",AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,-20,0.45,0),
 		Size=UDim2.fromOffset(58,124),BackgroundTransparency=1,Visible=false},gui)
