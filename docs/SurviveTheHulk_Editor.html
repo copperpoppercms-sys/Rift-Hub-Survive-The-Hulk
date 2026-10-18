@@ -1,0 +1,628 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rift Hub — Survive The Hulk · Full editable Lua</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#101114;color:#f0ece3}*{box-sizing:border-box}body{margin:0}header{position:sticky;top:0;z-index:2;background:#17191df5;border-bottom:1px solid #31343b;padding:18px 24px;backdrop-filter:blur(12px)}.bar{max-width:1400px;margin:auto;display:flex;gap:18px;align-items:center;justify-content:space-between;flex-wrap:wrap}h1{font-size:18px;margin:0 0 5px;letter-spacing:.02em}p{margin:0;font-size:12px;color:#a3a5ae}.actions{display:flex;gap:8px;flex-wrap:wrap}button,a{font:600 13px system-ui;border-radius:8px;padding:11px 15px;border:1px solid #454038;cursor:pointer;touch-action:manipulation}button{color:#17191d;background:#78e64c}button:hover{background:#efb778}button:active{transform:translateY(1px)}button:focus-visible,a:focus-visible{outline:3px solid #f0ece3;outline-offset:3px}a{background:#1d2025;color:#f0ece3;text-decoration:none}#status{max-width:1400px;margin:10px auto 0;font-size:12px;min-height:18px;color:#78e64c}main{max-width:1448px;margin:auto;padding:20px 24px 40px}.note{font-size:12px;line-height:1.6;color:#a3a5ae;margin-bottom:16px}pre{margin:0;padding:20px;background:#17191d;border:1px solid #31343b;border-radius:12px;overflow-x:auto;tab-size:4;font-size:12px;line-height:1.65;user-select:text;-webkit-user-select:text}code{font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;color:#e0e3eb}@media(max-width:600px){header{padding:14px}.bar{gap:12px}main{padding:14px 10px 30px}pre{padding:14px;font-size:11px}.actions{width:100%}.actions button{flex:1}}
+
+#source{display:block;width:100%;min-height:70vh;margin:0;padding:20px;background:#17191d;color:#e0e3eb;border:1px solid #31343b;border-radius:12px;resize:vertical;overflow-x:auto;overflow-y:hidden;tab-size:4;font:13px/1.65 ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;white-space:pre;outline:none;caret-color:#78e64c}#source:focus{border-color:#78e64c;box-shadow:0 0 0 1px #78e64c55}@media(max-width:600px){#source{font-size:16px;padding:12px}}
+</style>
+</head>
+<body>
+<header>
+<div class="bar"><div><h1>RIFT HUB / SURVIVE THE HULK</h1><p>Full editable Lua script · Tap the code to type</p></div><div class="actions"><button id="copy" type="button">Copy all code</button><button id="select" type="button">Select all</button><a id="download" href="#" download="RiftHub_SurviveTheHulk.lua">Download .lua</a></div></div>
+<div id="status" role="status" aria-live="polite">Edit the code below, then copy or download your version.</div>
+</header>
+<main><p class="note">Tap anywhere in the code to type or edit. Copy all code and Download .lua use your latest edits. Download your edited file to keep your changes.</p><details open><summary>Hulk missing or highlighted black?</summary><p>Enter the exact Hulk username under Visuals → Hulk identity if the game hides its role. You can also execute this report script after the full UI during a round, then paste the copied report into the chat.</p><button id="reportCopy" type="button">Copy Hulk report script</button><textarea id="reportSource" aria-label="Hulk report script" readonly spellcheck="false" rows="16" style="display:block;width:100%;margin:12px 0;background:#17191d;color:#e0e3eb">-- Run after the Survive The Hulk UI, while a round is active.
+local e = type(getgenv) == "function" and getgenv() or _G
+local h = e.RiftHulkHub
+if type(h) ~= "table" or type(h.Report) ~= "function" then
+    warn("Execute the Survive The Hulk script first.")
+    return
+end
+h.Refresh()
+h.Step(0.2)
+local report = h.Report()
+print(report)
+if type(setclipboard) == "function" and pcall(setclipboard, report) then
+    print("Hulk report copied. Paste it into the chat.")
+else
+    warn("Clipboard unavailable. The report is printed in the console.")
+end
+</textarea></details><textarea id="source" aria-label="Editable Lua script" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off">-- Rift Hub / Survive The Hulk / v1.0 / standalone Luau.
+-- No external UI library. All effects, movement overrides and connections unload cleanly.
+local Players=game:GetService("Players")
+local Run=game:GetService("RunService")
+local Input=game:GetService("UserInputService")
+local Tween=game:GetService("TweenService")
+local Lighting=game:GetService("Lighting")
+local LocalPlayer=Players.LocalPlayer
+local env=type(getgenv)=="function" and getgenv() or _G
+if type(env.RiftHulkHub)=="table" and type(env.RiftHulkHub.Unload)=="function" then pcall(env.RiftHulkHub.Unload) end
+local API={Game="Survive The Hulk",Version="1.0",PlaceId=109166720609444,UniverseId=10742937135}
+local C={Base=Color3.fromRGB(13,17,15),Panel=Color3.fromRGB(21,27,23),Hover=Color3.fromRGB(29,39,31),
+	Line=Color3.fromRGB(48,65,51),Green=Color3.fromRGB(120,230,76),DarkGreen=Color3.fromRGB(40,65,36),
+	Text=Color3.fromRGB(232,240,228),Sub=Color3.fromRGB(144,163,145),Black=Color3.fromRGB(4,5,6),White=Color3.fromRGB(209,218,208),
+	Red=Color3.fromRGB(246,109,84)}
+local Config={ESP=true,Hulk=true,Players=true,Chams=true,Names=true,Distance=true,Health=true,ThroughWalls=true,
+	Opacity=0.48,Range=1500,Warnings=true,HulkOverride="",Noclip=false,Speed=false,WalkSpeed=28,
+	JumpBoost=false,JumpPower=70,InfiniteJump=false,Fullbright=false,WideView=false,FOV=85,ReduceMotion=false}
+API.Config=Config
+local alive=true
+local connections,rows,candidates,collisions={}, {}, {}, {}
+local uiOrders=setmetatable({},{__mode="k"})
+local movement,lightSnapshot,cameraSnapshot=nil,nil,nil
+local gui,panel,bubble,fitScale,warning,healthStat,hulkStat,playerStat,statusLabel,headerStatus,sidebarFrame,contentFrame
+local toggles,sliders={},{}
+local lastMessage,lastMessageAt="Ready",0
+local selectedTab="overview"
+local minimized=false
+local function connect(event,fn)
+	local connection=event:Connect(fn); table.insert(connections,connection); return connection
+end
+local function make(class,props,parent)
+	local node=Instance.new(class)
+	for name,value in pairs(props) do node[name]=value end
+	if parent and node:IsA("GuiObject") and props.LayoutOrder==nil then uiOrders[parent]=(uiOrders[parent] or 0)+1; node.LayoutOrder=uiOrders[parent] end
+	node.Parent=parent; return node
+end
+local function round(node,radius) return make("UICorner",{CornerRadius=UDim.new(0,radius or 10)},node) end
+local function animate(node,props,duration)
+	if Config.ReduceMotion then for key,value in pairs(props) do node[key]=value end; return end
+	local tween=Tween:Create(node,TweenInfo.new(duration or 0.16,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),props)
+	tween:Play()
+end
+local function message(text)
+	lastMessage=text; lastMessageAt=os.clock()
+	if statusLabel then statusLabel.Text=text end
+end
+local function normalize(value) return type(value)=="string" and value:lower():gsub("[^%w]","") or "" end
+local function hulkWord(value)
+	if type(value)~="string" then return false end
+	local word=normalize(value)
+	return word=="hulk" or word=="thehulk" or word=="hulkrig" or word=="hulknpc" or word=="npchulk" or word=="incrediblehulk" or
+		value:lower():match("%f[%a]hulk%f[%A]")~=nil
+end
+local function body(plr)
+	local model=plr and plr.Character
+	local entities=workspace:FindFirstChild("Entities")
+	if (not model or not model.Parent) and entities and plr then model=entities:FindFirstChild(plr.Name) end
+	local hum=model and model:FindFirstChildOfClass("Humanoid")
+	local root=model and (model:FindFirstChild("HumanoidRootPart") or model.PrimaryPart)
+	if model and model.Parent and hum and hum.Health&gt;0 and root and root:IsA("BasePart") then return model,hum,root end
+end
+local function ownerOf(model)
+	for _,plr in ipairs(Players:GetPlayers()) do
+		if plr.Character==model then return plr end
+		if model.Parent and model.Parent.Name=="Entities" and plr.Name==model.Name then return plr end
+	end
+end
+local roleFields={"Role","Team","Character","CharacterType","MorphCurrent","SelectedCharacter","MonsterType"}
+local function isHulk(model,plr)
+	if plr and Config.HulkOverride~="" and plr.Name:lower()==Config.HulkOverride:lower() then return true,"Username override" end
+	if plr and plr.Team and hulkWord(plr.Team.Name) then return true,"Player.Team" end
+	for _,node in ipairs({model,plr or false}) do
+		if node then
+			if node:GetAttribute("IsHulk")==true then return true,node.Name..".@IsHulk" end
+			for _,field in ipairs(roleFields) do
+				if hulkWord(node:GetAttribute(field)) then return true,node.Name..".@"..field end
+				local value=node:FindFirstChild(field)
+				if value and value:IsA("StringValue") and hulkWord(value.Value) then return true,value:GetFullName() end
+			end
+		end
+	end
+	-- Player usernames and green cosmetics are never treated as proof of a Hulk role.
+	if not plr and hulkWord(model.Name) then return true,"NPC model name" end
+	return false,"No Hulk role exposed"
+end
+API.IsHulk=isHulk
+local function destroyRow(row)
+	for _,node in ipairs({row.Highlight,row.Tag}) do pcall(function() node:Destroy() end) end
+end
+local function newRow(model)
+	local highlight=make("Highlight",{Name="RiftHulk_Chams",Enabled=false,OutlineTransparency=0.12},model)
+	highlight.Adornee=model
+	local tag=make("BillboardGui",{Name="RiftHulk_Tag",Size=UDim2.fromOffset(220,62),AlwaysOnTop=true,Enabled=false,
+		StudsOffsetWorldSpace=Vector3.new(0,2.4,0),MaxDistance=Config.Range},model)
+	local name=make("TextLabel",{Size=UDim2.new(1,0,0,19),BackgroundTransparency=1,Font=Enum.Font.GothamBold,
+		TextSize=13,TextColor3=C.Text,TextStrokeTransparency=0.3,Text=""},tag)
+	local detail=make("TextLabel",{Position=UDim2.fromOffset(0,20),Size=UDim2.new(1,0,0,17),BackgroundTransparency=1,
+		Font=Enum.Font.GothamMedium,TextSize=11,TextColor3=C.Sub,TextStrokeTransparency=0.3,Text=""},tag)
+	local track=make("Frame",{Position=UDim2.new(0.5,-36,0,43),Size=UDim2.fromOffset(72,4),BackgroundColor3=C.Base,BorderSizePixel=0},tag)
+	round(track,3)
+	local fill=make("Frame",{Size=UDim2.fromScale(1,1),BackgroundColor3=C.Green,BorderSizePixel=0},track); round(fill,3)
+	return {Highlight=highlight,Tag=tag,Name=name,Detail=detail,Track=track,Fill=fill}
+end
+local function restoreCollisions()
+	for part,value in pairs(collisions) do pcall(function() part.CanCollide=value end) end
+	table.clear(collisions)
+end
+local function restoreMovement()
+	if movement then
+		pcall(function()
+			if movement.SpeedApplied then movement.Hum.WalkSpeed=movement.WalkSpeed end
+			if movement.JumpApplied then movement.Hum.JumpPower=movement.JumpPower; movement.Hum.UseJumpPower=movement.UseJumpPower end
+		end)
+		movement=nil
+	end
+end
+local function restoreLight()
+	if not lightSnapshot then return end
+	for key,value in pairs(lightSnapshot) do pcall(function() Lighting[key]=value end) end
+	lightSnapshot=nil
+end
+local function restoreCamera()
+	if cameraSnapshot then pcall(function() cameraSnapshot.Camera.FieldOfView=cameraSnapshot.FOV end); cameraSnapshot=nil end
+end
+local function applyMovement()
+	local _,hum=body(LocalPlayer)
+	if not hum then restoreMovement(); return end
+	if movement and movement.Hum~=hum then restoreMovement() end
+	if not movement then movement={Hum=hum,WalkSpeed=hum.WalkSpeed,JumpPower=hum.JumpPower,UseJumpPower=hum.UseJumpPower} end
+	if Config.Speed then
+		if movement.SpeedApplied and hum.WalkSpeed~=movement.SpeedApplied then movement.WalkSpeed=hum.WalkSpeed end
+		hum.WalkSpeed=Config.WalkSpeed; movement.SpeedApplied=Config.WalkSpeed
+	elseif movement.SpeedApplied then hum.WalkSpeed=movement.WalkSpeed; movement.SpeedApplied=nil
+	else movement.WalkSpeed=hum.WalkSpeed end
+	if Config.JumpBoost then
+		if not movement.JumpApplied then movement.JumpPower=hum.JumpPower; movement.UseJumpPower=hum.UseJumpPower end
+		hum.UseJumpPower=true; hum.JumpPower=Config.JumpPower; movement.JumpApplied=true
+	elseif movement.JumpApplied then hum.JumpPower=movement.JumpPower; hum.UseJumpPower=movement.UseJumpPower; movement.JumpApplied=nil end
+end
+function API.Physics()
+	if not alive then return end
+	if not Config.Noclip then if next(collisions) then restoreCollisions() end; return end
+	local model=body(LocalPlayer)
+	if not model then restoreCollisions(); return end
+	for _,part in ipairs(model:GetDescendants()) do
+		if part:IsA("BasePart") then
+			if collisions[part]==nil then collisions[part]=part.CanCollide end
+			part.CanCollide=false
+		end
+	end
+end
+local function applyVisibility()
+	if Config.Fullbright then
+		if not lightSnapshot then lightSnapshot={Brightness=Lighting.Brightness,Ambient=Lighting.Ambient,
+			OutdoorAmbient=Lighting.OutdoorAmbient,GlobalShadows=Lighting.GlobalShadows,FogEnd=Lighting.FogEnd} end
+		Lighting.Brightness=2.4; Lighting.Ambient=Color3.fromRGB(160,170,160); Lighting.OutdoorAmbient=Color3.fromRGB(160,170,160)
+		Lighting.GlobalShadows=false; Lighting.FogEnd=100000
+	else restoreLight() end
+	local camera=workspace.CurrentCamera
+	if cameraSnapshot and (cameraSnapshot.Camera~=camera or not Config.WideView) then restoreCamera() end
+	if Config.WideView and camera and camera.CameraType~=Enum.CameraType.Scriptable then
+		if not cameraSnapshot then cameraSnapshot={Camera=camera,FOV=camera.FieldOfView} end
+		camera.FieldOfView=Config.FOV
+	end
+end
+local function addHumanoid(node)
+	if node:IsA("Humanoid") and node.Parent and node.Parent:IsA("Model") then candidates[node.Parent]=true end
+end
+function API.Refresh()
+	if not alive then return end
+	for _,node in ipairs(workspace:GetDescendants()) do addHumanoid(node) end
+	for _,plr in ipairs(Players:GetPlayers()) do if plr.Character then candidates[plr.Character]=true end end
+end
+local nearest,nearestDistance,hulkCount=nil,nil,0
+local function updateESP()
+	local own,ownHum,ownRoot=body(LocalPlayer)
+	nearest,nearestDistance,hulkCount=nil,nil,0
+	for _,plr in ipairs(Players:GetPlayers()) do if plr.Character then candidates[plr.Character]=true end end
+	for model in pairs(candidates) do
+		local hum=model.Parent and model:FindFirstChildOfClass("Humanoid")
+		local root=model.Parent and (model:FindFirstChild("HumanoidRootPart") or model.PrimaryPart)
+		local plr=ownerOf(model)
+		local hulk,source=isHulk(model,plr)
+		local valid=model.Parent and hum and hum.Health&gt;0 and root and root:IsA("BasePart") and model~=own and (plr or hulk)
+		if valid then
+			local distance=ownRoot and (root.Position-ownRoot.Position).Magnitude or 0
+			if hulk then
+				hulkCount+=1
+				if ownRoot and (not nearestDistance or distance&lt;nearestDistance) then nearest,nearestDistance=model,distance end
+			end
+			local row=rows[model]
+			if not row then row=newRow(model); rows[model]=row end
+			row.Hulk=hulk; row.Source=source
+			local enabled=Config.ESP and distance&lt;=Config.Range and (hulk and Config.Hulk or not hulk and Config.Players)
+			local color=hulk and C.Green or C.Black
+			row.Highlight.Enabled=enabled and Config.Chams
+			row.Highlight.DepthMode=Config.ThroughWalls and Enum.HighlightDepthMode.AlwaysOnTop or Enum.HighlightDepthMode.Occluded
+			row.Highlight.FillColor=color; row.Highlight.OutlineColor=hulk and C.Green or C.White
+			row.Highlight.FillTransparency=1-Config.Opacity
+			row.Tag.Adornee=model:FindFirstChild("Head") or root
+			row.Tag.Enabled=enabled and (Config.Names or Config.Distance or Config.Health)
+			row.Tag.AlwaysOnTop=Config.ThroughWalls; row.Tag.MaxDistance=Config.Range
+			row.Name.Visible=Config.Names; row.Name.Text=plr and (plr.DisplayName.."  @"..plr.Name) or model.Name
+			row.Name.TextColor3=hulk and C.Green or C.Text
+			local info={hulk and "HULK" or "PLAYER"}
+			if Config.Distance then table.insert(info,tostring(math.floor(distance)).." studs") end
+			if Config.Health then table.insert(info,tostring(math.floor(hum.Health)).." HP") end
+			row.Detail.Text=table.concat(info,"  ·  "); row.Detail.TextColor3=hulk and C.Green or C.White
+			row.Track.Visible=Config.Health; row.Fill.Size=UDim2.fromScale(math.clamp(hum.Health/math.max(1,hum.MaxHealth),0,1),1)
+		elseif rows[model] then destroyRow(rows[model]); rows[model]=nil end
+		if not model.Parent then candidates[model]=nil end
+	end
+	API.NearestHulk=nearest; API.HulkDistance=nearestDistance; API.HulkCount=hulkCount
+	if healthStat then healthStat.Text=ownHum and tostring(math.floor(ownHum.Health)).." HP" or "RESPAWNING" end
+	if playerStat then playerStat.Text=tostring(#Players:GetPlayers()) end
+	if hulkStat then hulkStat.Text=nearestDistance and tostring(math.floor(nearestDistance)).." studs" or "Not detected" end
+	if headerStatus then headerStatus.Text=hulkCount&gt;0 and "HULK SIGNAL DETECTED" or "MONITORING FACILITY" end
+	if warning then
+		local selfHulk=own and isHulk(own,LocalPlayer)
+		warning.Visible=Config.Warnings and nearestDistance~=nil and nearestDistance&lt;=100 and not selfHulk
+		warning.Text=nearestDistance and string.format("HULK NEARBY  ·  %d studs",math.floor(nearestDistance)) or ""
+		warning.TextColor3=nearestDistance and nearestDistance&lt;35 and C.Red or C.Green
+	end
+end
+local function syncControls()
+	for _,paint in ipairs(toggles) do paint() end
+	for _,paint in ipairs(sliders) do paint() end
+end
+function API.Set(key,value)
+	if not alive then return false,"Hub unloaded" end
+	if Config[key]==nil then return false,"Unknown option" end
+	if type(Config[key])~=type(value) then return false,"Wrong value type" end
+	local bounds={WalkSpeed={16,80},JumpPower={45,120},FOV={60,110},Range={100,2500},Opacity={0,1}}
+	if bounds[key] then
+		if value~=value or math.abs(value)==math.huge then return false,"Invalid number" end
+		value=math.clamp(value,bounds[key][1],bounds[key][2])
+	end
+	if key=="HulkOverride" then value=value:match("^%s*@?(.-)%s*$") or "" end
+	Config[key]=value
+	if key=="Noclip" and not value then restoreCollisions() end
+	applyMovement(); applyVisibility(); updateESP(); syncControls()
+	return true
+end
+function API.Report()
+	local lines={"Rift Hub / Survive The Hulk / "..API.Version,"Place: "..tostring(game.PlaceId),"Universe: "..tostring(game.GameId),
+		"Confirmed Hulk models: "..hulkCount,"Hulk override: "..Config.HulkOverride}
+	for _,plr in ipairs(Players:GetPlayers()) do
+		local model=plr.Character; local hulk,source=false,"No character"
+		if model then hulk,source=isHulk(model,plr) end
+		table.insert(lines,"@"..plr.Name.." | Hulk="..tostring(hulk==true).." | source="..tostring(source).." | team="..tostring(plr.Team and plr.Team.Name))
+		for _,node in ipairs({plr,model or false}) do if node then
+			for key,value in pairs(node:GetAttributes()) do
+				if type(value)=="string" or type(value)=="boolean" or type(value)=="number" then table.insert(lines,node.Name..".@"..key.." = "..tostring(value):sub(1,160)) end
+			end
+		end end
+	end
+	return table.concat(lines,"\n")
+end
+function API.Unload()
+	if not alive then return end; alive=false
+	for _,connection in ipairs(connections) do connection:Disconnect() end; table.clear(connections)
+	restoreCollisions(); restoreMovement(); restoreLight(); restoreCamera()
+	for _,row in pairs(rows) do destroyRow(row) end; table.clear(rows); table.clear(candidates)
+	if gui then gui:Destroy() end
+	if env.RiftHulkHub==API then env.RiftHulkHub=nil end
+end
+local function label(parent,text,size,color,pos,dimensions,bold)
+	return make("TextLabel",{Text=text,TextSize=size,TextColor3=color or C.Text,Font=bold and Enum.Font.GothamBold or Enum.Font.Gotham,
+		TextXAlignment=Enum.TextXAlignment.Left,BackgroundTransparency=1,Position=pos or UDim2.new(),Size=dimensions or UDim2.new(1,0,0,20)},parent)
+end
+local function hover(button)
+	local scale=make("UIScale",{Scale=1},button)
+	connect(button.MouseEnter,function() animate(scale,{Scale=1.025},0.12) end)
+	connect(button.MouseLeave,function() animate(scale,{Scale=1},0.16) end)
+	connect(button.InputBegan,function(input)
+		if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then
+			animate(scale,{Scale=0.97},0.08); task.delay(0.1,function() if alive and button.Parent then animate(scale,{Scale=1},0.14) end end)
+		end
+	end)
+end
+local function section(parent,title,description)
+	local box=make("Frame",{Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y,BackgroundColor3=C.Panel,BorderSizePixel=0},parent)
+	round(box,10); make("UIStroke",{Color=C.Line,Transparency=0.35},box)
+	make("UIPadding",{PaddingLeft=UDim.new(0,14),PaddingRight=UDim.new(0,14),PaddingTop=UDim.new(0,12),PaddingBottom=UDim.new(0,12)},box)
+	make("UIListLayout",{SortOrder=Enum.SortOrder.LayoutOrder,Padding=UDim.new(0,8)},box)
+	label(box,title,13,C.Text,nil,UDim2.new(1,0,0,20),true)
+	if description then local note=label(box,description,11,C.Sub,nil,UDim2.new(1,0,0,0)); note.TextWrapped=true; note.AutomaticSize=Enum.AutomaticSize.Y end
+	return box
+end
+local function toggle(parent,key,title,description)
+	local row=make("TextButton",{Name=key,Size=UDim2.new(1,0,0,description and 59 or 34),Text="",AutoButtonColor=false,
+		BackgroundTransparency=1,BorderSizePixel=0},parent)
+	label(row,title,12,C.Text,UDim2.fromOffset(0,3),UDim2.new(1,-60,0,20),true)
+	if description then label(row,description,10,C.Sub,UDim2.fromOffset(0,25),UDim2.new(1,-58,0,28)).TextWrapped=true end
+	local track=make("Frame",{AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,0,0.5,0),Size=UDim2.fromOffset(36,20),BackgroundColor3=C.Line,BorderSizePixel=0},row); round(track,12)
+	local knob=make("Frame",{Position=UDim2.fromOffset(3,3),Size=UDim2.fromOffset(14,14),BackgroundColor3=C.Sub,BorderSizePixel=0},track); round(knob,8)
+	local previous
+	local function paint()
+		if previous==Config[key] then return end; previous=Config[key]
+		animate(track,{BackgroundColor3=previous and C.DarkGreen or C.Line})
+		animate(knob,{Position=previous and UDim2.fromOffset(19,3) or UDim2.fromOffset(3,3),BackgroundColor3=previous and C.Green or C.Sub})
+	end
+	table.insert(toggles,paint); paint(); hover(row)
+	connect(row.Activated,function() API.Set(key,not Config[key]) end)
+end
+local activeSlider
+local function slider(parent,key,title,minimum,maximum,suffix)
+	local row=make("Frame",{Name=key,Size=UDim2.new(1,0,0,48),BackgroundTransparency=1},parent)
+	label(row,title,12,C.Text,nil,UDim2.new(1,-65,0,20),true)
+	local value=label(row,"",11,C.Green,UDim2.new(1,-65,0,0),UDim2.fromOffset(65,20),true); value.TextXAlignment=Enum.TextXAlignment.Right
+	local hit=make("TextButton",{Position=UDim2.fromOffset(0,22),Size=UDim2.new(1,0,0,24),BackgroundTransparency=1,Text="",AutoButtonColor=false},row)
+	local track=make("Frame",{Position=UDim2.fromOffset(0,9),Size=UDim2.new(1,0,0,4),BackgroundColor3=C.Line,BorderSizePixel=0},hit); round(track,3)
+	local fill=make("Frame",{Size=UDim2.fromScale(0,1),BackgroundColor3=C.Green,BorderSizePixel=0},track); round(fill,3)
+	local knob=make("Frame",{AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0,0.5),Size=UDim2.fromOffset(10,10),BackgroundColor3=C.Text,BorderSizePixel=0},track); round(knob,6)
+	local function paint()
+		local fraction=(Config[key]-minimum)/(maximum-minimum)
+		fill.Size=UDim2.fromScale(fraction,1); knob.Position=UDim2.fromScale(fraction,0.5)
+		value.Text=key=="Opacity" and string.format("%d%%",math.floor(Config[key]*100+0.5)) or string.format("%d%s",Config[key],suffix or "")
+	end
+	local function update(x)
+		if track.AbsoluteSize.X&lt;=0 then return end
+		local alpha=math.clamp((x-track.AbsolutePosition.X)/track.AbsoluteSize.X,0,1)
+		local number=minimum+(maximum-minimum)*alpha
+		API.Set(key,key=="Opacity" and number or math.floor(number+0.5))
+	end
+	table.insert(sliders,paint); paint()
+	connect(hit.InputBegan,function(input)
+		if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then activeSlider={Input=input,Update=update}; update(input.Position.X) end
+	end)
+end
+local function button(parent,title,caption,fn)
+	local item=make("TextButton",{Size=UDim2.new(1,0,0,38),Text=title,Font=Enum.Font.GothamBold,TextSize=12,TextColor3=C.Text,
+		BackgroundColor3=C.Hover,AutoButtonColor=false,BorderSizePixel=0},parent); round(item,8); hover(item)
+	connect(item.Activated,function() local ok,err=pcall(fn); if not ok then message(tostring(err)) end end)
+	if caption then label(parent,caption,10,C.Sub,nil,UDim2.new(1,0,0,26)).TextWrapped=true end
+	return item
+end
+local pages,tabPaint={},{}
+local function selectTab(id)
+	selectedTab=id
+	for name,page in pairs(pages) do page.Visible=name==id end
+	for _,paint in ipairs(tabPaint) do paint() end
+end
+local function build()
+	gui=make("ScreenGui",{Name="RiftSurviveTheHulk",ResetOnSpawn=false,IgnoreGuiInset=true,DisplayOrder=950,ZIndexBehavior=Enum.ZIndexBehavior.Sibling},nil)
+	local ok=pcall(function() gui.Parent=type(gethui)=="function" and gethui() or game:GetService("CoreGui") end)
+	if not ok or not gui.Parent then gui.Parent=LocalPlayer:WaitForChild("PlayerGui") end
+	API.Gui=gui
+	panel=make("Frame",{Name="Window",AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Size=UDim2.fromOffset(660,460),BackgroundTransparency=1},gui)
+	fitScale=make("UIScale",{Scale=1},panel)
+	local surface=make("CanvasGroup",{Size=UDim2.fromScale(1,1),BackgroundColor3=C.Base,BorderSizePixel=0,GroupTransparency=1},panel); round(surface,14)
+	make("UIStroke",{Color=C.Line,Thickness=1},surface)
+	local opening=make("UIScale",{Scale=0.96},surface)
+	make("Frame",{Position=UDim2.fromOffset(16,0),Size=UDim2.new(1,-32,0,2),BackgroundColor3=C.Green,BackgroundTransparency=0.16,BorderSizePixel=0},surface)
+	local top=make("Frame",{Name="DragHandle",Active=true,Size=UDim2.new(1,0,0,60),BackgroundTransparency=1},surface)
+	local mark=make("Frame",{Position=UDim2.fromOffset(16,14),Size=UDim2.fromOffset(34,34),BackgroundColor3=C.DarkGreen,BorderSizePixel=0},top); round(mark,9)
+	label(mark,"H",23,C.Green,UDim2.fromOffset(8,2),UDim2.fromOffset(25,30),true)
+	label(top,"RIFT HUB",14,C.Text,UDim2.fromOffset(61,11),UDim2.new(1,-165,0,23),true)
+	headerStatus=label(top,"MONITORING FACILITY",9,C.Sub,UDim2.fromOffset(62,35),UDim2.new(1,-165,0,14),true)
+	local close=make("TextButton",{Name="Close",Position=UDim2.new(1,-43,0,16),Size=UDim2.fromOffset(28,28),Text="×",TextSize=21,
+		Font=Enum.Font.Gotham,TextColor3=C.Sub,BackgroundColor3=C.Panel,AutoButtonColor=false,BorderSizePixel=0},top); round(close,8); hover(close)
+	local minimize=make("TextButton",{Name="Minimize",Position=UDim2.new(1,-78,0,16),Size=UDim2.fromOffset(28,28),Text="−",TextSize=20,
+		Font=Enum.Font.Gotham,TextColor3=C.Sub,BackgroundColor3=C.Panel,AutoButtonColor=false,BorderSizePixel=0},top); round(minimize,8); hover(minimize)
+	local side=make("Frame",{Position=UDim2.fromOffset(0,60),Size=UDim2.new(0,145,1,-60),BackgroundColor3=C.Panel,BorderSizePixel=0},surface)
+	sidebarFrame=side
+	label(side,"SURVIVE THE HULK",9,C.Green,UDim2.fromOffset(14,14),UDim2.new(1,-20,0,18),true)
+	label(side,"CONTAINMENT\nDIVISION",9,C.Sub,UDim2.new(0,14,1,-63),UDim2.new(1,-20,0,38),true)
+	local content=make("Frame",{Position=UDim2.fromOffset(145,60),Size=UDim2.new(1,-145,1,-88),BackgroundTransparency=1,ClipsDescendants=true},surface)
+	contentFrame=content
+	for i,entry in ipairs({{"overview","Overview"},{"visuals","Visuals"},{"movement","Movement"},{"utility","Utility"}}) do
+		local id,title=entry[1],entry[2]
+		local tab=make("TextButton",{Name=id,Position=UDim2.fromOffset(10,47+(i-1)*43),Size=UDim2.new(1,-20,0,35),Text="  "..title,
+			Font=Enum.Font.GothamMedium,TextSize=12,TextXAlignment=Enum.TextXAlignment.Left,TextColor3=C.Sub,
+			AutoButtonColor=false,BackgroundColor3=C.DarkGreen,BackgroundTransparency=1,BorderSizePixel=0},side); round(tab,8); hover(tab)
+		table.insert(tabPaint,function() animate(tab,{BackgroundTransparency=selectedTab==id and 0 or 1,TextColor3=selectedTab==id and C.Green or C.Sub}) end)
+		connect(tab.Activated,function() selectTab(id) end)
+		local page=make("ScrollingFrame",{Name=id,Size=UDim2.fromScale(1,1),BackgroundTransparency=1,BorderSizePixel=0,ScrollBarThickness=3,
+			ScrollBarImageColor3=C.DarkGreen,CanvasSize=UDim2.new(),AutomaticCanvasSize=Enum.AutomaticSize.Y,Visible=false},content)
+		make("UIPadding",{PaddingLeft=UDim.new(0,16),PaddingRight=UDim.new(0,16),PaddingTop=UDim.new(0,14),PaddingBottom=UDim.new(0,16)},page)
+		make("UIListLayout",{SortOrder=Enum.SortOrder.LayoutOrder,Padding=UDim.new(0,12)},page)
+		label(page,title,21,C.Text,nil,UDim2.new(1,0,0,32),true); pages[id]=page
+	end
+	local overview=section(pages.overview,"Facility watch","Track the Hulk, keep your bearings, and choose your movement tools.")
+	local function stat(title)
+		local row=make("Frame",{Size=UDim2.new(1,0,0,32),BackgroundTransparency=1},overview)
+		label(row,title,11,C.Sub,nil,UDim2.new(0.55,0,1,0))
+		local value=label(row,"—",15,C.Green,UDim2.fromScale(0.55,0),UDim2.fromScale(0.45,1),true); value.TextXAlignment=Enum.TextXAlignment.Right; return value
+	end
+	healthStat=stat("YOUR HEALTH"); hulkStat=stat("NEAREST HULK"); playerStat=stat("PLAYERS")
+	local guide=section(pages.overview,"Read the room","Green = confirmed Hulk. Black = other players, with a pale outline for visibility.")
+	local guideText=label(guide,"Visuals start on. Movement changes start off.\nIf Hulk is not detected, use the username override under Visuals.",11,C.Sub,nil,UDim2.new(1,0,0,0))
+	guideText.TextWrapped=true; guideText.AutomaticSize=Enum.AutomaticSize.Y
+	local visual=section(pages.visuals,"Entity overlay")
+	for _,entry in ipairs({{"ESP","Enable ESP"},{"Hulk","Show Hulk"},{"Players","Show other players"},{"Chams","Character highlights"},{"Names","Usernames"},{"Distance","Distance labels"},{"Health","Health + health bar"},{"ThroughWalls","See through walls"}}) do toggle(visual,entry[1],entry[2]) end
+	slider(visual,"Opacity","Highlight fill",0,1)
+	slider(visual,"Range","Maximum distance",100,2500," st")
+	local identity=section(pages.visuals,"Hulk identity","If the game hides its role data, enter the exact Hulk username. Leave blank for automatic detection.")
+	local override=make("TextBox",{Name="HulkOverride",Size=UDim2.new(1,0,0,34),BackgroundColor3=C.Base,TextColor3=C.Text,PlaceholderColor3=C.Sub,
+		PlaceholderText="@username (optional)",Text="",ClearTextOnFocus=false,Font=Enum.Font.Gotham,TextSize=12,BorderSizePixel=0},identity); round(override,7)
+	connect(override.FocusLost,function() API.Set("HulkOverride",override.Text); override.Text=Config.HulkOverride end)
+	local move=section(pages.movement,"Movement power","Use modest values first. The game can enforce movement limits.")
+	toggle(move,"Speed","Speed boost"); slider(move,"WalkSpeed","Walk speed",16,80)
+	toggle(move,"JumpBoost","Jump boost"); slider(move,"JumpPower","Jump power",45,120)
+	toggle(move,"InfiniteJump","Infinite jump","Jump again while in the air.")
+	toggle(move,"Noclip","Noclip","Pass through parts; watch for floor gaps.")
+	local visibility=section(pages.utility,"Visibility &amp; alerts")
+	toggle(visibility,"Warnings","Nearby Hulk warning")
+	toggle(visibility,"Fullbright","Fullbright")
+	toggle(visibility,"WideView","Custom field of view"); slider(visibility,"FOV","Field of view",60,110,"°")
+	toggle(visibility,"ReduceMotion","Reduce UI motion")
+	local tools=section(pages.utility,"Session tools")
+	button(tools,"Refresh entity scan",nil,function() API.Refresh(); updateESP(); message("Entity scan refreshed") end)
+	button(tools,"Copy Hulk detection report","Use this if the Hulk stays black or is missing.",function()
+		local report=API.Report(); print(report)
+		if type(setclipboard)=="function" and pcall(setclipboard,report) then message("Report copied — paste it into the chat") else message("Report printed in console; clipboard unavailable") end
+	end)
+	button(tools,"Rejoin this server",nil,function()
+		local teleport=game:GetService("TeleportService")
+		if game.JobId~="" then teleport:TeleportToPlaceInstance(game.PlaceId,game.JobId,LocalPlayer) else teleport:Teleport(game.PlaceId,LocalPlayer) end
+	end)
+	button(tools,"Unload Rift Hub","Restores this script’s movement, lighting and collision changes.",API.Unload)
+	statusLabel=label(surface,"Ready",10,C.Sub,UDim2.new(0,160,1,-24),UDim2.new(1,-175,0,18))
+	warning=make("TextLabel",{Name="HulkWarning",AnchorPoint=Vector2.new(0.5,1),Position=UDim2.new(0.5,0,1,-26),Size=UDim2.fromOffset(270,32),
+		BackgroundColor3=C.Base,BackgroundTransparency=0.12,BorderSizePixel=0,TextColor3=C.Green,Font=Enum.Font.GothamBold,TextSize=12,Text="",Visible=false},gui); round(warning,9)
+	bubble=make("TextButton",{Name="Restore",AnchorPoint=Vector2.new(),Position=UDim2.fromOffset(18,150),Size=UDim2.fromOffset(48,48),Text="H",Font=Enum.Font.GothamBold,
+		TextSize=24,TextColor3=C.Green,BackgroundColor3=C.Base,BorderSizePixel=0,AutoButtonColor=false,Visible=false},gui); round(bubble,13); make("UIStroke",{Color=C.Green,Transparency=0.45},bubble); hover(bubble)
+	local drag,lastDragAt=nil,-10
+	local function startDrag(handle,target)
+		connect(handle.InputBegan,function(input)
+			if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then drag={Input=input,Start=input.Position,Origin=target.Position,Target=target,Moved=false} end
+		end)
+	end
+	startDrag(top,panel); startDrag(bubble,bubble)
+	connect(Input.InputChanged,function(input)
+		if activeSlider and (input==activeSlider.Input or input.UserInputType==Enum.UserInputType.MouseMovement and activeSlider.Input.UserInputType==Enum.UserInputType.MouseButton1) then activeSlider.Update(input.Position.X) end
+		if drag and (input==drag.Input or input.UserInputType==Enum.UserInputType.MouseMovement and drag.Input.UserInputType==Enum.UserInputType.MouseButton1) then
+			local delta=input.Position-drag.Start
+			if delta.Magnitude&gt;6 then drag.Moved=true end
+			local view=workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize
+			if view then
+				local width,height=drag.Target==panel and panel.Size.X.Offset*fitScale.Scale or 48,drag.Target==panel and panel.Size.Y.Offset*fitScale.Scale or 48
+				local anchor=drag.Target.AnchorPoint
+				local x=drag.Origin.X.Scale*view.X+drag.Origin.X.Offset+delta.X
+				local y=drag.Origin.Y.Scale*view.Y+drag.Origin.Y.Offset+delta.Y
+				drag.Target.Position=UDim2.fromOffset(math.clamp(x,8+width*anchor.X,math.max(8+width*anchor.X,view.X-8-width*(1-anchor.X))),math.clamp(y,8+height*anchor.Y,math.max(8+height*anchor.Y,view.Y-8-height*(1-anchor.Y))))
+			end
+		end
+	end)
+	connect(Input.InputEnded,function(input)
+		if activeSlider and input==activeSlider.Input then activeSlider=nil end
+		if drag and input==drag.Input then if drag.Moved then lastDragAt=os.clock() end; drag=nil end
+	end)
+	connect(Input.WindowFocusReleased,function() drag=nil; activeSlider=nil end)
+	local function minimizeTo(value)
+		minimized=value; panel.Visible=not value; bubble.Visible=value
+	end
+	connect(minimize.Activated,function() minimizeTo(true) end)
+	connect(bubble.Activated,function() if os.clock()-lastDragAt&gt;0.2 then minimizeTo(false) end end)
+	connect(close.Activated,API.Unload)
+	connect(Input.InputBegan,function(input,processed)
+		if not processed and not Input:GetFocusedTextBox() and input.KeyCode==Enum.KeyCode.RightShift then minimizeTo(not minimized) end
+	end)
+	connect(gui.Destroying,API.Unload)
+	selectTab("overview")
+	animate(surface,{GroupTransparency=0},0.22); animate(opening,{Scale=1},0.28)
+end
+local age,viewAge=0,0
+local lastView
+function API.Step(dt)
+	if not alive then return end
+	dt=math.clamp(tonumber(dt) or 0,0,0.5); age+=dt; viewAge+=dt
+	if viewAge&gt;=0.2 then
+		viewAge=0
+		local camera=workspace.CurrentCamera; local view=camera and camera.ViewportSize
+		if view and view~=lastView then
+			lastView=view
+			local width,height=math.clamp(view.X-20,320,660),math.clamp(view.Y-32,280,460)
+			panel.Size=UDim2.fromOffset(width,height)
+			fitScale.Scale=math.max(0.1,math.min(1,(view.X-20)/width,(view.Y-32)/height))
+			local sideWidth=width&lt;500 and 110 or 145
+			sidebarFrame.Size=UDim2.new(0,sideWidth,1,-60)
+			contentFrame.Position=UDim2.fromOffset(sideWidth,60); contentFrame.Size=UDim2.new(1,-sideWidth,1,-88)
+			statusLabel.Position=UDim2.new(0,sideWidth+15,1,-24); statusLabel.Size=UDim2.new(1,-sideWidth-30,0,18)
+			panel.Position=UDim2.fromScale(0.5,0.5)
+		end
+	end
+	if age&lt;0.1 then return end; age=0
+	applyMovement(); applyVisibility(); updateESP()
+	if os.clock()-lastMessageAt&gt;6 and statusLabel then statusLabel.Text="RIFT / SURVIVE THE HULK  ·  "..API.Version end
+end
+local built,buildError=pcall(build)
+if not built then API.Unload(); error("[Rift Hulk] UI startup: "..tostring(buildError),0) end
+env.RiftHulkHub=API
+connect(workspace.DescendantAdded,addHumanoid)
+connect(LocalPlayer.CharacterAdded,function() restoreCollisions(); restoreMovement() end)
+connect(Run.PreSimulation,API.Physics)
+connect(Run.Heartbeat,function(dt)
+	local ok,err=pcall(API.Step,dt)
+	if not ok then warn("[Rift Hulk] "..tostring(err)); API.Unload() end
+end)
+connect(Input.JumpRequest,function()
+	if alive and Config.InfiniteJump and not Input:GetFocusedTextBox() then local _,hum=body(LocalPlayer); if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end end
+end)
+API.Refresh(); API.Step(0.1)
+return API
+</textarea></main>
+<script>
+const source = document.getElementById('source');
+const status = document.getElementById('status');
+const copy = document.getElementById('copy');
+const download = document.getElementById('download');
+let downloadUrl = null;
+let edited = false;
+function fitEditor() {
+  source.style.height = 'auto';
+  source.style.height = (source.scrollHeight + 2) + 'px';
+}
+function selectAll() {
+  source.focus();
+  source.select();
+  source.setSelectionRange(0, source.value.length);
+  status.textContent = 'All current code selected. Choose Copy from your device’s selection menu.';
+}
+document.getElementById('select').addEventListener('click', selectAll);
+source.addEventListener('input', () => {
+  edited = true;
+  fitEditor();
+  status.textContent = 'Edited. Copy or download to keep your changes; this page does not save automatically.';
+});
+source.addEventListener('keydown', event => {
+  if (event.key === 'Tab' && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
+    event.preventDefault();
+    source.setRangeText('	', source.selectionStart, source.selectionEnd, 'end');
+    source.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+});
+function fallbackCopy(code) {
+  const area = document.createElement('textarea');
+  area.value = code;
+  area.readOnly = true;
+  area.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;';
+  document.body.appendChild(area);
+  area.focus();
+  area.select();
+  area.setSelectionRange(0, area.value.length);
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch (error) {}
+  area.remove();
+  return ok;
+}
+document.getElementById('reportCopy').addEventListener('click', async () => {
+  const report = document.getElementById('reportSource');
+  let ok = false;
+  if (navigator.clipboard && window.isSecureContext) {
+    try { await navigator.clipboard.writeText(report.value); ok = true; } catch (error) {}
+  }
+  if (!ok) ok = fallbackCopy(report.value);
+  if (!ok) { report.focus(); report.select(); report.setSelectionRange(0, report.value.length); }
+  status.textContent = ok ? 'Report script copied. Execute it AFTER the hub, then paste the resulting report into the chat.' : 'Report script selected. Choose Copy from your selection menu.';
+});
+copy.addEventListener('click', async () => {
+  const code = source.value;
+  let ok = false;
+  if (navigator.clipboard && window.isSecureContext) {
+    try { await navigator.clipboard.writeText(code); ok = true; } catch (error) {}
+  }
+  if (!ok) ok = fallbackCopy(code);
+  if (ok) {
+    copy.textContent = 'Copied!';
+    status.textContent = 'Current Lua code copied, including your edits. Paste it into Delta.';
+    setTimeout(() => { copy.textContent = 'Copy all code'; }, 2000);
+  } else {
+    selectAll();
+    status.textContent = 'Clipboard access was blocked. Your current code is selected; choose Copy from the selection menu.';
+  }
+});
+function updateDownload() {
+  if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+  downloadUrl = URL.createObjectURL(new Blob([source.value], { type: 'text/plain;charset=utf-8' }));
+  download.href = downloadUrl;
+}
+download.addEventListener('click', () => {
+  updateDownload();
+  status.textContent = 'Downloading the current Lua code, including your edits.';
+});
+window.addEventListener('resize', fitEditor);
+window.addEventListener('beforeunload', event => {
+  if (edited) { event.preventDefault(); event.returnValue = ''; }
+});
+updateDownload();
+fitEditor();
+</script>
+</body>
+</html>
